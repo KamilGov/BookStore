@@ -1,0 +1,393 @@
+package eBookstore;
+import java.sql.*;
+import java.util.Scanner;
+
+public class EnterBook {
+	
+	
+	// 				Option 1
+	public static void enter(String bookName, String author, int howMany, Statement stmt) throws SQLException {
+
+			// check if book title is already in library
+			ResultSet rset = stmt.executeQuery("select qty from books where title = '" + bookName + "' and author = '" + author +"'");
+			
+			
+			int qty = 0;
+			if (rset.next()){
+				qty = rset.getInt("qty");
+			}
+			
+			
+			String strUpdate = "";
+			//If already in library
+			if (qty >= 1){
+				strUpdate = "update books set qty = qty + " + howMany + " where title = '" + bookName + "' and author = '" + author + "'";
+				int countUpdated = stmt.executeUpdate(strUpdate);
+				System.out.println(countUpdated + " records affected.");
+				MainMenu.menu();
+			}
+			
+			//if not in library
+			else{
+				rset =stmt.executeQuery("select max(id) from books");
+				int id = 0;
+				while (rset.next()){
+					id = rset.getInt("max(id)") + 1; 
+				}
+				System.out.println("ID number will be " + id);
+				String strInsert = "insert into books values (" + id + ", '" + bookName + "', '" + author + "', " + howMany + ")";
+				System.out.println("The SQL query is: " + strInsert);
+				int countUpdated = stmt.executeUpdate(strInsert);
+				System.out.println(countUpdated + " records affected.");
+				MainMenu.menu();
+				
+			}
+	}
+	
+	
+	//				Option 2
+	public static void update(Scanner input, Statement stmt) throws SQLException{
+		
+		ResultSet rset;
+		System.out.println("What is the id number of the book you want to update? (Leave blank if unknown)");
+		String id = "" ;
+		id = input.nextLine();
+		//if blank
+		if (id.equals("")){
+			System.out.println("Enter in the title or the author of the book you would like to update?");
+			String title= input.nextLine();
+			rset = stmt.executeQuery("select count(*) from books where title = '" + title + "' or author = '" + title + "'");
+			int counter=0;
+			while (rset.next()){
+				counter = rset.getInt("count(*)");
+			}
+			if (counter >=2){
+				System.out.println("These are the books found: ");
+				rset = stmt.executeQuery("select * from books where title = '" + title + "' or author = '" + title + "'");
+				while (rset.next()){
+					System.out.println("ID Number: " + rset.getInt("id") + "\nTitle: " + rset.getString("title") 
+							+ "\nAuthor:  " + rset.getString("author") + "\nQuantity: " + rset.getInt("qty"));
+				}
+				System.out.println("Please enter the ID of the book you'd like to update");
+				int bookID = input.nextInt(); input.nextLine();
+				rset = stmt.executeQuery("select * where id = " + bookID);
+				
+			}
+			else {
+				rset = stmt.executeQuery("select * from books where title = '" + title + "' or author = '" + title + "'");
+			}
+			
+			
+			
+		}
+		else{
+			rset = stmt.executeQuery("select * from books where id = " + id);
+		}
+		
+		
+		
+		String bookTitle = "";
+		int bookQty = 0;
+		int bookID = 0;
+		String author = "";
+		
+		while (rset.next()){
+			bookID = rset.getInt("id");
+			bookQty = rset.getInt("qty");
+			bookTitle = rset.getString("title");
+			author = rset.getString("author");
+			
+		}
+		
+		//Check if book exists before proceeding. 
+		if (ifExists(bookID, stmt)){
+			System.out.println("The book you have selected is: ");
+			System.out.println("ID Number: " + bookID + "\nTitle: " + bookTitle 
+					+ "\nAuthor:  " + author + "\nQuantity: " + bookQty);
+			
+			System.out.println("What would you like to do? \n1) Change quantity of book \n2) Change title \n3) Change author \n4) Change ID");
+			int choice = input.nextInt(); input.nextLine();
+			
+			if (choice == 1){
+				System.out.println("There are currently " + bookQty + " copies of '" +  bookTitle + "'.");
+				System.out.println("What should we change the quantity to?");
+				int qty = input.nextInt();
+				input.nextLine();
+				int countUpdated = stmt.executeUpdate("update books set qty = " + qty + " where id = " + bookID );
+				System.out.println(countUpdated + " records changed");
+				enterMenu(input);
+			}
+			
+			if (choice == 2){
+				System.out.println("The current title is: '" + bookTitle + "'.");
+				System.out.println("Please enter in the new title: ");
+				String newTitle = input.nextLine();
+				int countUpdated = stmt.executeUpdate("update books set title = '" + newTitle + "' where id = "+ bookID);
+				System.out.println(countUpdated + " records updated.");
+				enterMenu(input);
+			}
+			
+			if (choice == 3){
+				System.out.println("The current author is: '" + author + "'");
+				System.out.println("Please enter in new author: ");
+				String newAuthor = input.nextLine();
+				int countUpdated = stmt.executeUpdate("update books set author = '" + newAuthor + "' where id = " + bookID);
+				System.out.println(countUpdated + " records updated.");
+				enterMenu(input);
+			}
+			
+			if (choice == 4){
+				System.out.println("The current id is: " + id);
+				System.out.println("Please enter in new id: ");
+				int newID = input.nextInt();
+				input.nextLine();
+				int countUpdated = stmt.executeUpdate("update books set id = " + newID	 + " where id = " + bookID);
+				System.out.println(countUpdated + " records updated.");
+				enterMenu(input);
+			}
+		}
+		
+		else{
+			System.out.println("That book does not exist!");
+			MainMenu.menu();
+		}
+	}
+	
+	
+	//				Option 3
+	public static void delete (int id, Scanner input, Statement stmt) throws SQLException{
+		
+		ResultSet rset = stmt.executeQuery("select * from books where id = " + id);
+		
+		if (!rset.isBeforeFirst()){
+			System.out.println("Book not found! \nPress enter for main menu");
+			input.nextLine();
+			MainMenu.menu();
+		}
+		
+		else{
+			System.out.println("The book you have selected is: ");
+			
+			while(rset.next()){
+				System.out.println("ID Number: " + rset.getInt("id") + "\nTitle: " + rset.getString("title") 
+				+ "\nAuthor:  " + rset.getString("author") + "\nQuantity: " + rset.getInt("qty"));
+			}
+			
+			System.out.println("Would you like to delete all the copies of this book?");
+			String deleteAll = input.nextLine();
+			int countUpdated;
+			if(deleteAll.equalsIgnoreCase("yes")){
+				countUpdated = stmt.executeUpdate("delete from books where id = " + id);
+				System.out.println(countUpdated + " records affected.");
+				MainMenu.menu();
+			}
+			else if (deleteAll.equalsIgnoreCase("no")){
+				deleteSome(id, input, stmt);
+			}
+			
+		}
+
+				
+	}
+	
+	public static void deleteSome(int id, Scanner input, Statement stmt) throws SQLException{
+		
+		System.out.println("How many would you like to delete?");
+		int numDelete = input.nextInt(); input.nextLine();
+		ResultSet rset = stmt.executeQuery("select qty from books where id = " + id);
+		int qtyBooks = 0;
+		while (rset.next()){
+			qtyBooks = rset.getInt("qty");
+		}
+		if (numDelete <= qtyBooks) {
+			int countUpdated = stmt.executeUpdate("update books set qty = qty - " + numDelete + " where id = " + id);
+			System.out.println(countUpdated + " records updated.");
+			rset = stmt.executeQuery("select * from books where id = " + id);
+			while(rset.next()){
+				System.out.println("ID Number: " + rset.getInt("id") + "\nTitle: " + rset.getString("title") 
+				+ "\nAuthor:  " + rset.getString("author") + "\nQuantity: " + rset.getInt("qty"));
+			}
+			MainMenu.menu();
+		}
+		else {
+			System.out.println("There are only " + qtyBooks + " books available!");
+			deleteSome(id, input, stmt);
+		}		
+	}
+
+	public static void delete (String title, String author, Scanner input, Statement stmt) throws SQLException{
+
+		System.out.println("The book you have selected is: ");
+		ResultSet rset = stmt.executeQuery("select * from books where title = '" + title + "' and author = '" + author + "'");
+		while(rset.next()){
+			System.out.println("ID Number: " + rset.getInt("id") + "\nTitle: " + rset.getString("title") 
+			+ "\nAuthor:  " + rset.getString("author") + "\nQuantity: " + rset.getInt("qty"));
+		}
+		System.out.println("Would you like to delete all the copies of this book? (yes/no)");
+		String deleteAll = input.nextLine();
+		int countUpdated;
+		if(deleteAll.equalsIgnoreCase("yes")){
+			countUpdated = stmt.executeUpdate("delete from books where title = '" + title + "'" + " and author = '" + author + "'");
+			System.out.println(countUpdated + " records affected.");
+			MainMenu.menu();
+		}
+		else if (deleteAll.equalsIgnoreCase("no")){
+			deleteSome(title, author, input, stmt);
+		}
+}
+
+	public static void deleteSome(String title, String author, Scanner input, Statement stmt) throws SQLException{
+			
+			System.out.println("How many would you like to delete?");
+			int numDelete = input.nextInt(); input.nextLine();
+			ResultSet rset = stmt.executeQuery("select qty from books where title = '" + title + "' and author = '" + author + "'");
+			int qtyBooks = 0;
+			while (rset.next()){
+				qtyBooks = rset.getInt("qty");
+			}
+			if (numDelete <= qtyBooks) {
+				int countUpdated = stmt.executeUpdate("update books set qty = qty - " + numDelete + " where title = '" 
+						+ title + "' and author = '" + author + "'");
+				System.out.println(countUpdated + " records updated.");
+				rset = stmt.executeQuery("select * from books where title = '" + title + "' and author = '" + author + "'");
+				while(rset.next()){
+					System.out.println("ID Number: " + rset.getInt("id") + "\nTitle: " + rset.getString("title") 
+					+ "\nAuthor:  " + rset.getString("author") + "\nQuantity: " + rset.getInt("qty"));
+				}
+				MainMenu.menu();
+			}
+			else {
+				System.out.println("There are only " + qtyBooks + " books available!");
+				deleteSome(title, author, input, stmt);
+			}		
+		}
+	
+	
+	
+	//				Option 4
+	public static void search (Scanner input, Statement stmt)throws SQLException{
+		System.out.println("What would you like to search for? \n1) Book ID \n2) Title \n3) Author");
+		int searchOption = input.nextInt();
+		input.nextLine();
+		if (searchOption == 1){
+			System.out.println("Enter Book ID: ");
+			int id = input.nextInt();
+			input.nextLine();
+			searchID(input, stmt, id);
+		}
+		else if (searchOption == 2){
+			System.out.println("Enter Title:");
+			String title = input.nextLine();
+			searchTitle(input, stmt, title);
+			
+		}
+		
+		else if (searchOption == 3){
+			System.out.println("Enter Author:");
+			String author = input.nextLine();
+			searchAuthor(input, stmt, author);
+		}
+		
+	}
+	
+	public static void searchID (Scanner input, Statement stmt, int id)throws SQLException{
+		
+		
+		ResultSet rset = stmt.executeQuery("select * from books where id = " + id);
+		
+		//If book not found
+		if (!rset.isBeforeFirst()){
+			System.out.println("Book not found! \nPress enter for main menu");
+			input.nextLine();
+			MainMenu.menu();
+		}
+		//if found
+		else {
+			System.out.println("Results: ");
+			while(rset.next()){
+				
+				System.out.println("ID Number: " + rset.getInt("id") + "\nTitle: " + rset.getString("title") 
+				+ "\nAuthor:  " + rset.getString("author") + "\nQuantity: " + rset.getInt("qty") +"\n");
+				
+			}
+			System.out.println("Press enter for menu");
+			input.nextLine();
+			MainMenu.menu();
+		}
+	}
+
+	public static void searchTitle(Scanner input, Statement stmt, String title) throws SQLException{
+		
+		ResultSet rset = stmt.executeQuery("select * from books where title = '" + title + "'");
+		
+		//If book not found
+		if (!rset.isBeforeFirst()){
+			System.out.println("Book not found! \nPress enter for main menu");
+			input.nextLine();
+			MainMenu.menu();
+		}
+		//if found
+		else {
+			System.out.println("Results: ");
+			while(rset.next()){
+				System.out.println("ID Number: " + rset.getInt("id") + "\nTitle: " + rset.getString("title") 
+				+ "\nAuthor:  " + rset.getString("author") + "\nQuantity: " + rset.getInt("qty") +"\n");
+			}
+			System.out.println("Press enter for menu");
+			input.nextLine();
+			MainMenu.menu();
+		}
+		
+		
+	}
+
+	public static void searchAuthor(Scanner input, Statement stmt, String author)throws SQLException{
+		
+		ResultSet rset = stmt.executeQuery("select * from books where author = '" + author + "'");
+		
+		//If book not found
+		if (!rset.isBeforeFirst()){
+			System.out.println("Book not found! \nPress enter for main menu");
+			input.nextLine();
+			MainMenu.menu();
+		}
+		//if found
+		else {
+			System.out.println("Results: ");
+			while(rset.next()){
+				System.out.println("ID Number: " + rset.getInt("id") + "\nTitle: " + rset.getString("title") 
+				+ "\nAuthor:  " + rset.getString("author") + "\nQuantity: " + rset.getInt("qty") +"\n");
+			}
+			
+		enterMenu(input);
+		}
+	}
+	
+	
+	
+	
+	
+	
+	//				EXTRAS
+	
+	public static void enterMenu(Scanner input){
+		System.out.println("Press enter for menu");
+		input.nextLine();
+		MainMenu.menu();
+	}
+	
+	public static boolean ifExists (int id, Statement stmt) throws SQLException {
+		ResultSet rset = stmt.executeQuery("select * from books where id = " + id);
+		return rset.isBeforeFirst();
+	}
+	
+	public static boolean ifExistsTitle (String title, Statement stmt) throws SQLException {
+		ResultSet rset = stmt.executeQuery("select * from books where title = '" + title + "'");
+		return rset.isBeforeFirst();
+	}
+	
+	public static boolean ifExistsAuthor (String author, Statement stmt) throws SQLException {
+		ResultSet rset = stmt.executeQuery("select * from books where author = '" + author + "'");
+		return rset.isBeforeFirst();
+	}
+}
