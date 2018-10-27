@@ -1,0 +1,83 @@
+package eBookstore;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Scanner;
+
+public class MainMenu {
+	
+	public static void menu (){
+		
+		try (
+				Scanner input = new Scanner(System.in);
+				Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ebookstore?useSSL=false", "myuser", "xxxx");
+				Statement stmt = conn.createStatement();
+				){
+		System.out.println("Main menu: What would you like to do?");
+		System.out.println("1. Enter book \n2. Update book \n3. Delete book \n4. Search book \n5. Exit");
+		
+		int optSelect = input.nextInt();
+		input.nextLine();
+		
+		//Enter Book Option
+		if (optSelect == 1){
+			System.out.println("What is the name of the book?");
+			String bookName = input.nextLine();
+			System.out.println("What is the author's name?");
+			String author = input.nextLine();
+			System.out.println("How many copies are you adding?");
+			int copies = input.nextInt();
+			EnterBook.enter(bookName, author, copies, stmt);
+		}
+		
+		
+		//Update Book Option
+		
+		if (optSelect == 2){
+			EnterBook.update(input, stmt);
+		}
+		//Delete Book Option
+		if (optSelect == 3){
+			System.out.println("What is the id number of the book you want to delete from the database? (Leave blank if unknown)");
+			String id = "" ;
+			id = input.nextLine();
+			//if blank
+			if (id.equals("")){
+				System.out.println("What is the name of the book you want to delete from the database?");
+				String title= input.nextLine();
+				System.out.println("What is the author's name?");
+				String author = input.nextLine();
+				if (EnterBook.ifExistsAuthor(author, stmt)){
+					EnterBook.delete(title, author, input, stmt);	
+				}
+				else{
+					System.out.println("Book not found!");
+					menu();
+				}
+			}
+			else{
+				EnterBook.delete(Integer.parseInt(id), input, stmt);
+			}
+		}
+		
+		//Search Option
+		if (optSelect == 4){
+			EnterBook.search(input, stmt);
+		}
+		
+		//Exit Option
+		if (optSelect == 5){
+			System.out.println("Goodbye!");
+		}
+
+	}catch (SQLException ex) {
+		ex.printStackTrace();
+	} 
+}
+
+	public static void main(String[] args) {
+		menu();
+	}		
+}
+		
